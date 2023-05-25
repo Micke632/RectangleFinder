@@ -1,45 +1,44 @@
 #include "rect.h"
-#include <memory_resource>
+
 
 rect::rect()
 {
 
 }
 
-int rect::countColAt(int start, const std::vector<int> &col, int row, std::set<std::pair<int, int>> &set)
+int rect::countColAt(int start, const std::vector<int> &col, int row, Set_type &set)
 {
     int c = 0;
-    auto it = set.begin();
+
     for (int m = start; m < col.size(); m++)
     {
         auto p = std::make_pair(row, m);
         if (col[m] == 1 || m_checkedPoints.count(p))
         {
             break;
-        }
-        else
-        {
-            //  m_used.insert( p);            
-            it = set.emplace_hint(it, p);
-        }
+        }      
+
+        set.insert(p);        
         c++;
     }
 
     return c;
 }
 
-int rect::countRowAt(int start, int col, const std::vector<std::vector<int>> &a)
+int rect::countRowAt(int start, int col, const std::vector<std::vector<int>> &a, Set_type &set)
 {
     int c = 0;
     int y = a.size();
+    auto it = set.begin();
     for (int m = start; m < y; m++)
     {
-
-        if (a[m][col] == 1 || m_checkedPoints.count({ m,col }))
+        auto p = std::make_pair(m, col);
+        if (a[m][col] == 1 || m_checkedPoints.count(p))
         {
             break;
         }
 
+        set.insert(p);
         c++;
     }
 
@@ -49,13 +48,11 @@ int rect::countRowAt(int start, int col, const std::vector<std::vector<int>> &a)
 
 void rect::setChecked(int i, int i2, int j, int j2)
 {
-    auto it = m_checkedPoints.begin();
-
     for (int k = i; k <= i2; k++)
     {
         for (int l = j; l <= j2; l++)
         {
-            it = m_checkedPoints.emplace_hint(it, std::make_pair(k, l));
+            m_checkedPoints.emplace(std::make_pair(k, l));
         }
     }
 }
@@ -68,30 +65,44 @@ void rect::findend(const int i,           //start position row
 {
 
     //set for first column so we can skip that later
-    std::set<std::pair<int, int>> firstColumn;
+    Set_type firstColumn;
 
-    int countCol = countColAt(j, a.at(i), i, firstColumn);
+    const int countCol = countColAt(j, a.at(i), i, firstColumn);
 
-    int countRow = countRowAt(i, j, a);
+    //set for first row so we can skip that later
+    Set_type firstRow;
+
+    const int countRow = countRowAt(i, j, a , firstRow);
 
 
+    auto insertFrom = [&](const Set_type &from) {
+
+        for (auto &p : from)
+        {
+            m_checkedPoints.insert(p);
+        }
+
+    };
     //one item
     if (countCol == 1 && countRow == 1)
     {
         outI = i;
         outJ = j;
 
-        m_checkedPoints.insert(firstColumn.begin(), firstColumn.end());
+        insertFrom(firstColumn);
 
+        
         return;
     }
     else if (countCol > 1 && countRow == 1)
     {
         //a column
         outI = i;
-        outJ = j + countCol - 1;
+        outJ = j + countCol - 1;   
+        
+        insertFrom(firstColumn);
 
-        setChecked(i, i, j, j + countCol - 1);
+     
         return;
     }
     else if (countRow > 1 && countCol == 1)
@@ -99,70 +110,63 @@ void rect::findend(const int i,           //start position row
         //a row
         outI = i + countRow - 1;
         outJ = j;
-
-        setChecked(i, i + countRow - 1, j, j);
+        
+        insertFrom(firstRow);
 
         return;
     }
 
-    bool fullRect = true;
-
-    //playing around with pmr
-    std::array<std::byte, 1024> buffer;
-    std::pmr::monotonic_buffer_resource mbr(&buffer, buffer.size());
-    std::pmr::unsynchronized_pool_resource ups(&mbr);
+ 
 
     //checked points to check wether there is a rectangle
-    std::pmr::set<std::pair<int, int>> checked(&ups);
+    Set_type  checked;
 
-    //include the already checked first column
-    checked.insert(firstColumn.begin(), firstColumn.end());
-
-    auto it = checked.begin();
-    
-    for (int n = i + 1; n < countRow + i; n++)  //skip first column
+    auto checkRect = [&]()
     {
-        const auto &col = a[n];
-
-        for (int m = j; m < countCol + j; m++)
+        for (int n = i + 1; n < countRow + i; n++)  //skip first column
         {
-            if (col[m] == 1)
+            const auto &col = a[n];
+
+            for (int m = j + 1; m < countCol + j; m++)      //dont check first point each col , it'a already done
             {
-                fullRect = false;
-                break;
-            }
+                if (col[m] == 1)
+                {
+                    return false;
+                }
 
-            it = checked.emplace_hint(it, std::make_pair(n, m));
-
+                checked.insert(std::make_pair(n, m));
+            }        
         }
-        if (!fullRect) break;
-    }
+        return true;
+    };
 
 
-
+    bool fullRect = checkRect();
+     
     if (fullRect)
     {
-        m_checkedPoints.insert(checked.begin(), checked.end());
-
-        //get the last point
+  
+        insertFrom(firstColumn);
+        insertFrom(firstRow);
+        insertFrom(checked);
+           
         auto it = m_checkedPoints.rbegin();
         outI = it->first;
         outJ = it->second;
+
     }
     else
     {
 
-        // not a full rectacle , pick one part of it 
+        // not a full rectangle , pick one part of it 
         auto it = checked.end();
-        --it;       //last "in a row"
-
-        it = countCol > countRow ? it : --it;       //need the second last when row > col
+        --it;       //last point in order . 
 
         outI = it->first;
         outJ = it->second;
 
-        setChecked(i, it->first, j, it->second);
-
+        //fill the m_checkedPoints correctly
+        setChecked(i, outI, j, outJ);
     }
 
 
@@ -184,18 +188,25 @@ std::vector<std::array<int, 4>> rect::get_rectangle_coordinates(const std::vecto
     {
         for (int j = 0; j < size_of_col; j++)
         {
-            int c = m_checkedPoints.count({ i,j });
-            if (c == 0 && a[i][j] == 0)
+           
+            if (a[i][j] == 0)
             {
-                int endi, endj;
+                //rect here , check if the point is already handled
+                auto p = std::make_pair(i, j);
+                int c = m_checkedPoints.count(p);
+                if (c == 0)
+                {
+                    int endi, endj;
 
-                findend(i, j, a, endi, endj);
+                    findend(i, j, a, endi, endj);
 
-                output.push_back({ i, j, endi, endj });
+                    output.push_back({ i, j, endi, endj });
+                }
 
             }
         }
     }
+
     m_checkedPoints.clear();
     return output;
 }

@@ -4,6 +4,7 @@
 #include <vector>
 #include <array>
 #include <cstddef>
+#include "../Util/itlib/flat_set.hpp"
 
 /*
 We have one 2D array filled with zeros and ones.
@@ -12,18 +13,19 @@ Rectangles dont have to be separated and can just contain one element.
 No intention to find the biggest rectangle. 
 
 */
+
 class rect
 {
 
+    using Set_type = itlib::flat_set<std::pair<int, int>>;      //sorted vector  , but a std::set will work just fine
 private:
 
-  
 
-    std::set<std::pair<int, int>> m_checkedPoints;
+    Set_type m_checkedPoints;
 
-    int countColAt(int start, const std::vector<int> &col, int row, std::set<std::pair<int, int>> &soft);
+    int countColAt(int start, const std::vector<int> &col, int row, Set_type &);
 
-    int countRowAt(int start, int col, const std::vector<std::vector<int>> &a);
+    int countRowAt(int start, int col, const std::vector<std::vector<int>> &a, Set_type &) ;
        
     void setChecked(int i, int i2, int j, int j2);
 
