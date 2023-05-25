@@ -5,6 +5,13 @@
 #include <array>
 #include <cstddef>
 
+/*
+We have one 2D array filled with zeros and ones.
+We have to find the starting point and ending point of all rectangles filled with 0. 
+Rectangles dont have to be separated and can just contain one element.
+No intention to find the biggest rectangle. 
+
+*/
 class rect
 {
 
