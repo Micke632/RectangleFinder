@@ -19,13 +19,13 @@ private:
 
   
 
-    std::set<std::pair<int, int>> m_used;
+    std::set<std::pair<int, int>> m_checkedPoints;
 
-    int countColAt(int start, const std::vector<int> &col, int row);
+    int countColAt(int start, const std::vector<int> &col, int row, std::set<std::pair<int, int>> &soft);
 
     int countRowAt(int start, int col, const std::vector<std::vector<int>> &a);
        
-    void setUsed(int i, int i2, int j, int j2);
+    void setChecked(int i, int i2, int j, int j2);
 
     
     void findend(const int i,           //start position row

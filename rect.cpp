@@ -6,14 +6,21 @@ rect::rect()
 
 }
 
-int rect::countColAt(int start, const std::vector<int> &col, int row)
+int rect::countColAt(int start, const std::vector<int> &col, int row, std::set<std::pair<int, int>> &set)
 {
     int c = 0;
+    auto it = set.begin();
     for (int m = start; m < col.size(); m++)
     {
-        if (col[m] == 1 || m_used.count({ row, m }))
+        auto p = std::make_pair(row, m);
+        if (col[m] == 1 || m_checkedPoints.count(p))
         {
             break;
+        }
+        else
+        {
+            //  m_used.insert( p);            
+            it = set.emplace_hint(it, p);
         }
         c++;
     }
@@ -27,10 +34,12 @@ int rect::countRowAt(int start, int col, const std::vector<std::vector<int>> &a)
     int y = a.size();
     for (int m = start; m < y; m++)
     {
-        if (a[m][col] == 1 || m_used.count({ m, col }))
+
+        if (a[m][col] == 1 || m_checkedPoints.count({ m,col }))
         {
             break;
         }
+
         c++;
     }
 
@@ -38,17 +47,15 @@ int rect::countRowAt(int start, int col, const std::vector<std::vector<int>> &a)
 }
 
 
-void rect::setUsed(int i, int i2, int j, int j2)
+void rect::setChecked(int i, int i2, int j, int j2)
 {
-    auto it = m_used.begin();
+    auto it = m_checkedPoints.begin();
 
     for (int k = i; k <= i2; k++)
     {
         for (int l = j; l <= j2; l++)
         {
-            auto p = std::make_pair(k, l);
-            //m_used.insert( p);            
-            it = m_used.emplace_hint(it, p);
+            it = m_checkedPoints.emplace_hint(it, std::make_pair(k, l));
         }
     }
 }
@@ -60,18 +67,22 @@ void rect::findend(const int i,           //start position row
     int &outJ)                      //out end pos col                   
 {
 
-    int countCol = countColAt(j, a.at(i), i);
+    //set for first column so we can skip that later
+    std::set<std::pair<int, int>> firstColumn;
+
+    int countCol = countColAt(j, a.at(i), i, firstColumn);
 
     int countRow = countRowAt(i, j, a);
 
-    
+
     //one item
     if (countCol == 1 && countRow == 1)
     {
         outI = i;
         outJ = j;
 
-        setUsed(i, i, j, j);
+        m_checkedPoints.insert(firstColumn.begin(), firstColumn.end());
+
         return;
     }
     else if (countCol > 1 && countRow == 1)
@@ -80,8 +91,7 @@ void rect::findend(const int i,           //start position row
         outI = i;
         outJ = j + countCol - 1;
 
-        setUsed(i, i, j, j + countCol - 1);
-
+        setChecked(i, i, j, j + countCol - 1);
         return;
     }
     else if (countRow > 1 && countCol == 1)
@@ -90,7 +100,7 @@ void rect::findend(const int i,           //start position row
         outI = i + countRow - 1;
         outJ = j;
 
-        setUsed(i, i + countRow - 1, j, j);
+        setChecked(i, i + countRow - 1, j, j);
 
         return;
     }
@@ -101,38 +111,41 @@ void rect::findend(const int i,           //start position row
     std::array<std::byte, 1024> buffer;
     std::pmr::monotonic_buffer_resource mbr(&buffer, buffer.size());
     std::pmr::unsynchronized_pool_resource ups(&mbr);
-    std::pmr::set<std::pair<int, int>> used(&ups);
 
-    auto it = used.begin();
-    if (countCol > 1 && countRow > 1)
+    //checked points to check wether there is a rectangle
+    std::pmr::set<std::pair<int, int>> checked(&ups);
+
+    //include the already checked first column
+    checked.insert(firstColumn.begin(), firstColumn.end());
+
+    auto it = checked.begin();
+    
+    for (int n = i + 1; n < countRow + i; n++)  //skip first column
     {
+        const auto &col = a[n];
 
-        for (int n = i; n < countRow + i; n++)
+        for (int m = j; m < countCol + j; m++)
         {
-            const auto &col = a[n];
-
-            for (int m = j; m < countCol + j; m++)
+            if (col[m] == 1)
             {
-                if (col[m] == 1)
-                {
-                    fullRect = false;
-                    break;
-                }
-
-                auto p = std::make_pair(n, m);
-                it = used.emplace_hint(it, p);
-
-                //used.insert({ n,m });
+                fullRect = false;
+                break;
             }
-            if (!fullRect) break;
-        }
 
+            it = checked.emplace_hint(it, std::make_pair(n, m));
+
+        }
+        if (!fullRect) break;
     }
+
+
 
     if (fullRect)
     {
-        m_used.insert(used.begin(), used.end());
-        auto it = m_used.rbegin();
+        m_checkedPoints.insert(checked.begin(), checked.end());
+
+        //get the last point
+        auto it = m_checkedPoints.rbegin();
         outI = it->first;
         outJ = it->second;
     }
@@ -140,7 +153,7 @@ void rect::findend(const int i,           //start position row
     {
 
         // not a full rectacle , pick one part of it 
-        auto it = used.end();
+        auto it = checked.end();
         --it;       //last "in a row"
 
         it = countCol > countRow ? it : --it;       //need the second last when row > col
@@ -148,7 +161,7 @@ void rect::findend(const int i,           //start position row
         outI = it->first;
         outJ = it->second;
 
-        setUsed(i, it->first, j, it->second);
+        setChecked(i, it->first, j, it->second);
 
     }
 
@@ -171,7 +184,7 @@ std::vector<std::array<int, 4>> rect::get_rectangle_coordinates(const std::vecto
     {
         for (int j = 0; j < size_of_col; j++)
         {
-            int c = m_used.count({ i,j });
+            int c = m_checkedPoints.count({ i,j });
             if (c == 0 && a[i][j] == 0)
             {
                 int endi, endj;
@@ -183,7 +196,7 @@ std::vector<std::array<int, 4>> rect::get_rectangle_coordinates(const std::vecto
             }
         }
     }
-    m_used.clear();
+    m_checkedPoints.clear();
     return output;
 }
 
