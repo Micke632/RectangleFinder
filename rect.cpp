@@ -57,9 +57,9 @@ void rect::setChecked(int i, int i2, int j, int j2)
     }
 }
 
-void rect::findend(const int i,           //start position row
+void rect::findend(const int i,     //start position row
     const int j,                    //start position column               
-    const std::vector<std::vector<int>> &a,         //data
+    const std::vector<std::vector<int>> &data,
     int &outI,                       //out end pos row                           
     int &outJ)                      //out end pos col                   
 {
@@ -67,17 +67,17 @@ void rect::findend(const int i,           //start position row
     //set for first column so we can skip that later
     Set_type firstColumn;
 
-    const int countCol = countColAt(j, a.at(i), i, firstColumn);
+    const int countCol = countColAt(j, data[i], i, firstColumn);
 
     //set for first row so we can skip that later
     Set_type firstRow;
 
-    const int countRow = countRowAt(i, j, a , firstRow);
+    const int countRow = countRowAt(i, j, data, firstRow);
 
 
     auto insertFrom = [&](const Set_type &from) {
 
-        for (auto &p : from)
+        for (const auto &p : from)
         {
             m_checkedPoints.insert(p);
         }
@@ -89,9 +89,7 @@ void rect::findend(const int i,           //start position row
         outI = i;
         outJ = j;
 
-        insertFrom(firstColumn);
-
-        
+        insertFrom(firstColumn);         
         return;
     }
     else if (countCol > 1 && countRow == 1)
@@ -100,9 +98,7 @@ void rect::findend(const int i,           //start position row
         outI = i;
         outJ = j + countCol - 1;   
         
-        insertFrom(firstColumn);
-
-     
+        insertFrom(firstColumn);     
         return;
     }
     else if (countRow > 1 && countCol == 1)
@@ -111,8 +107,7 @@ void rect::findend(const int i,           //start position row
         outI = i + countRow - 1;
         outJ = j;
         
-        insertFrom(firstRow);
-
+        insertFrom(firstRow);  
         return;
     }
 
@@ -125,7 +120,7 @@ void rect::findend(const int i,           //start position row
     {
         for (int n = i + 1; n < countRow + i; n++)  //skip first column
         {
-            const auto &col = a[n];
+            const auto &col = data[n];
 
             for (int m = j + 1; m < countCol + j; m++)      //dont check first point each col , it'a already done
             {
@@ -151,6 +146,8 @@ void rect::findend(const int i,           //start position row
         insertFrom(checked);
            
         auto it = m_checkedPoints.rbegin();
+
+        //last point is the end
         outI = it->first;
         outJ = it->second;
 
@@ -158,9 +155,8 @@ void rect::findend(const int i,           //start position row
     else
     {
 
-        // not a full rectangle , pick one part of it 
-        auto it = checked.end();
-        --it;       //last point in order . 
+        // not a full rectangle , pick what we got
+        auto it = checked.rbegin();
 
         outI = it->first;
         outJ = it->second;
