@@ -25,7 +25,7 @@ private:
 
     int countColAt(int start, const std::vector<int> &col, int row, Set_type &);
 
-    int countRowAt(int start, int col, const std::vector<std::vector<int>> &a, Set_type &) ;
+    int countRowAt(int start, int col, const std::vector<std::vector<int>> &a) ;
        
     void setChecked(int i, int i2, int j, int j2);
 

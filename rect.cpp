@@ -25,20 +25,19 @@ int rect::countColAt(int start, const std::vector<int> &col, int row, Set_type &
     return c;
 }
 
-int rect::countRowAt(int start, int col, const std::vector<std::vector<int>> &a, Set_type &set)
+int rect::countRowAt(int start, int col, const std::vector<std::vector<int>> &a)
 {
     int c = 0;
     int y = a.size();
-    auto it = set.begin();
+ 
     for (int m = start; m < y; m++)
     {
-        auto p = std::make_pair(m, col);
-        if (a[m][col] == 1 || m_checkedPoints.count(p))
+      
+        if (a[m][col] == 1 || m_checkedPoints.count(std::make_pair(m, col)))
         {
             break;
         }
 
-        set.insert(p);
         c++;
     }
 
@@ -67,13 +66,9 @@ void rect::findend(const int i,     //start position row
     //set for first column so we can skip that later
     Set_type firstColumn;
 
-    const int countCol = countColAt(j, data[i], i, firstColumn);
+    const int countCol = countColAt(j, data[i], i, firstColumn);  
 
-    //set for first row so we can skip that later
-    Set_type firstRow;
-
-    const int countRow = countRowAt(i, j, data, firstRow);
-
+    const int countRow = countRowAt(i, j, data);
 
     auto insertFrom = [&](const Set_type &from) {
 
@@ -107,7 +102,7 @@ void rect::findend(const int i,     //start position row
         outI = i + countRow - 1;
         outJ = j;
         
-        insertFrom(firstRow);  
+        setChecked(i, outI, j, outJ);
         return;
     }
 
@@ -122,7 +117,7 @@ void rect::findend(const int i,     //start position row
         {
             const auto &col = data[n];
 
-            for (int m = j + 1; m < countCol + j; m++)      //dont check first point each col , it'a already done
+            for (int m = j ; m < countCol + j; m++)     
             {
                 if (col[m] == 1)
                 {
@@ -142,7 +137,6 @@ void rect::findend(const int i,     //start position row
     {
   
         insertFrom(firstColumn);
-        insertFrom(firstRow);
         insertFrom(checked);
            
         auto it = m_checkedPoints.rbegin();
@@ -156,11 +150,13 @@ void rect::findend(const int i,     //start position row
     {
 
         // not a full rectangle , pick what we got
-        auto it = checked.rbegin();
+        auto it = checked.end();
+        --it;
+        it = countRow > countCol ? --it : it;
 
         outI = it->first;
         outJ = it->second;
-
+       
         //fill the m_checkedPoints correctly
         setChecked(i, outI, j, outJ);
     }
