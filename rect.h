@@ -21,20 +21,25 @@ class rect
 private:
 
 
-    Set_type m_checkedPoints;
-
+    Set_type m_vistited;
+    std::vector<std::array<int, 4>> m_output;
+  
     int countColAt(int start, const std::vector<int> &col, int row, Set_type &);
 
     int countRowAt(int start, int col, const std::vector<std::vector<int>> &a) ;
        
-    void setChecked(int i, int i2, int j, int j2);
+    void setVisited(int i, int i2, int j, int j2);
 
     
     void findend(const int i,           //start position row
         const int j,                    //start position column               
-        const std::vector<std::vector<int>> &a,         //data
-        int &outI,                       //out end pos row                           
-        int &outJ);                      //out end pos col                   
+        const std::vector<std::vector<int>> &a);         //data
+               
+
+    void setOut(int startI, int startJ, int outI,
+        int outJ);
+
+    int m_lastJ = 0;
 
 public:
     rect();
