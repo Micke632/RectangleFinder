@@ -21,7 +21,7 @@ class rect
 private:
 
 
-    Set_type m_vistited;
+    Set_type m_visited;
     std::vector<std::array<int, 4>> m_output;
   
     int countColAt(int start, const std::vector<int> &col, int row, Set_type &);

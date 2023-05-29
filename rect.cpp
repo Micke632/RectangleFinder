@@ -1,9 +1,11 @@
 #include "rect.h"
 #include <optional>
+#include <assert.h>
 
 rect::rect()
 {
     m_output.reserve(1024);
+    m_visited.modify_container().reserve(1024);
 }
 
 int rect::countColAt(int start, const std::vector<int> &col, int row, Set_type &set)
@@ -13,7 +15,7 @@ int rect::countColAt(int start, const std::vector<int> &col, int row, Set_type &
     for (int m = start; m < col.size(); m++)
     {
         auto p = std::make_pair(row, m);
-        if (col[m] == 1 || m_vistited.count(p))
+        if (col[m] == 1 || m_visited.count(p))
         {
             break;
         }      
@@ -28,12 +30,12 @@ int rect::countColAt(int start, const std::vector<int> &col, int row, Set_type &
 int rect::countRowAt(int start, int col, const std::vector<std::vector<int>> &a)
 {
     int c = 0;
-    int y = a.size();
+    size_t y = a.size();
  
     for (int m = start; m < y; m++)
     {
       
-        if (a[m][col] == 1 || m_vistited.count(std::make_pair(m, col)))
+        if (a[m][col] == 1 || m_visited.count(std::make_pair(m, col)))
         {
             break;
         }
@@ -51,7 +53,7 @@ void rect::setVisited(int i, int i2, int j, int j2)
     {
         for (int l = j; l <= j2; l++)
         {
-            m_vistited.emplace(std::make_pair(k, l));
+            m_visited.emplace(std::make_pair(k, l));
         }
     }
 }
@@ -66,7 +68,7 @@ void rect::findend(const int i,     //start position row
 
         for (const auto &p : from)
         {
-            m_vistited.insert(p);
+            m_visited.insert(p);
         }
 
     };
@@ -168,15 +170,16 @@ void rect::findend(const int i,     //start position row
                 //find not used part
                 int t = it->second - j + 1;
 
-                auto it = firstColumn.begin() + t;
+                auto it2 = firstColumn.begin() + t;
+                assert(it2 != firstColumn.end());
                 auto itend = firstColumn.rbegin();
 
-                setOut(it->first, it->second, it->first, itend->second);
+                setOut(it2->first, it2->second, it2->first, itend->second);
 
-                while (it != firstColumn.end())
+                while (it2 != firstColumn.end())
                 {
-                    m_vistited.insert(*it);
-                    ++it;
+                    m_visited.insert(*it2);
+                    ++it2;
                 }
 
                 
@@ -200,13 +203,14 @@ void rect::setOut(int startI, int startJ,int endI,
 std::vector<std::array<int, 4>> rect::get_rectangle_coordinates(const std::vector<std::vector<int>> &a)
 {
 
-    int size_of_array = a.size();
+    size_t size_of_array = a.size();
 
     //we assume all columns have the same size
-    int size_of_col = a[0].size();
+    size_t size_of_col = a[0].size();
     // output array where we are going
     // to store our output
     m_output.clear();
+    m_visited.clear();
 
     for (int i = 0; i < size_of_array; i++)
     {
@@ -214,10 +218,9 @@ std::vector<std::array<int, 4>> rect::get_rectangle_coordinates(const std::vecto
         {
            
             if (a[i][j] == 0)
-            {
-                //rect here , check if the point is already handled
+            {               
                 auto p = std::make_pair(i, j);
-                int c = m_vistited.count(p);
+                size_t c = m_visited.count(p);
                 if (c == 0)
                 {                 
                    findend(i, j, a);
@@ -230,7 +233,7 @@ std::vector<std::array<int, 4>> rect::get_rectangle_coordinates(const std::vecto
       
     }
 
-    m_vistited.clear();
+   
     return m_output;
 }
 
